@@ -1,0 +1,220 @@
+/* ══════════════════════════════════════
+   EDIT PROFILE PAGE STYLES
+══════════════════════════════════════ */
+.edit-profile-main {
+  flex: 1;
+  min-width: 0;
+  max-width: 600px;
+  border-right: 1px solid var(--border);
+  background: #fff;
+}
+
+.edit-feed-header {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  height: 53px;
+  border-bottom: 1px solid var(--border);
+}
+
+.edit-feed-back {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--black);
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-right: 20px;
+}
+.edit-feed-back:hover {
+  background: var(--hover-bg);
+}
+.edit-feed-back svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.edit-feed-title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black);
+  margin: 0;
+}
+
+.edit-feed-save {
+  background: var(--black);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.edit-feed-save:hover {
+  background: #272c30;
+}
+
+.error-msg {
+  background: #fde8dc;
+  color: #c0392b;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Banner */
+.edit-banner {
+  height: 200px;
+  position: relative;
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.edit-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: 
+      radial-gradient(circle at 100% 0%, rgba(255,255,255,0.08) 0%, transparent 40%),
+      radial-gradient(circle at 0% 100%, rgba(0,0,0,0.15) 0%, transparent 40%);
+}
+
+.banner-cam {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+}
+.banner-cam:hover {
+  background: rgba(0,0,0,0.5);
+}
+.banner-cam svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Avatar row */
+.edit-avatar-row {
+  position: relative;
+  height: 70px; /* half of avatar overlaps */
+  padding: 0 16px;
+}
+.edit-avatar-wrap {
+  position: absolute;
+  top: -68px; /* Negative half height to overlap banner */
+  width: 134px;
+  height: 134px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: #fde8dc; /* Brand fallback */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+.edit-avatar-circle {
+  font-size: 48px;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  outline: none;
+}
+.edit-avatar-cam {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.edit-avatar-cam:hover {
+  background: rgba(0,0,0,0.4);
+}
+.edit-avatar-cam svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* Input groups */
+.edit-form-fields {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.input-group {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  transition: border-color 0.2s;
+  background: #fff;
+}
+.input-group:focus-within {
+  border-color: var(--brand);
+}
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  color: var(--gray);
+  margin-bottom: 2px;
+}
+
+.input-group input,
+.input-group textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--black);
+  resize: none;
+}
+.input-group input:disabled {
+  color: var(--gray);
+}

@@ -8,37 +8,28 @@ require_login();
 $username = htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
 $initial  = mb_strtoupper(mb_substr($username, 0, 1));
 
-// ── Stub feed data ─────────────────────────────────────────────────────────
-$pints = [
-    [
-        'user'    => $username,
-        'handle'  => '@' . strtolower($username),
-        'time'    => 'just now',
-        'body'    => 'Just joined PintSocial! 🍺 Cheers to everyone here. #PintSocial #FirstPint',
-        'replies' => 0, 'repints' => 0, 'likes' => 0,
-    ],
-    [
-        'user'    => 'PintSocial',
-        'handle'  => '@pintsocial',
-        'time'    => '2m',
-        'body'    => 'Welcome to PintSocial — the social network that never runs dry. 🍻 Share your world, one pint at a time.',
-        'replies' => 12, 'repints' => 47, 'likes' => 203,
-    ],
-    [
-        'user'    => 'Brew Daily',
-        'handle'  => '@brewdaily',
-        'time'    => '18m',
-        'body'    => 'Hot take: a cold pint fixes most problems. Discuss. 👇',
-        'replies' => 88, 'repints' => 124, 'likes' => 940,
-    ],
-    [
-        'user'    => 'Tap Room News',
-        'handle'  => '@taproom',
-        'time'    => '1h',
-        'body'    => 'New craft ales dropping this weekend at the Tap Room. Who\'s coming? 🎉 #CraftBeer #Weekend',
-        'replies' => 34, 'repints' => 61, 'likes' => 412,
-    ],
-];
+// ── Handle new pint submission ─────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
+    csrf_verify();
+    $body = trim($_POST['body']);
+    if ($body !== '') {
+        $db = get_db();
+        $stmt = $db->prepare('INSERT INTO pints (user_id, body) VALUES (?, ?)');
+        $stmt->execute([$_SESSION['user_id'], $body]);
+    }
+    redirect('dashboard.php');
+}
+
+// ── Fetch feed data ─────────────────────────────────────────────────────────
+$db = get_db();
+$stmt = $db->query('
+    SELECT p.*, u.username 
+    FROM pints p 
+    JOIN users u ON p.user_id = u.id 
+    ORDER BY p.created_at DESC 
+    LIMIT 50
+');
+$pints = $stmt->fetchAll();
 
 require_once __DIR__ . '/components/stub_data.php';
 ?>
@@ -75,73 +66,82 @@ require_once __DIR__ . '/components/stub_data.php';
     </div>
 
     <!-- Compose box -->
-    <div class="compose-box">
+    <form method="POST" action="dashboard.php" class="compose-box">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <div class="avatar lg"><?= $initial ?></div>
       <div class="compose-body">
-        <textarea class="compose-input" id="composeInput"
-                  placeholder="What's happening?" rows="2"></textarea>
+        <textarea name="body" class="compose-input" id="composeInput"
+                  placeholder="What's happening?" rows="2" required></textarea>
         <div class="compose-divider"></div>
         <div class="compose-actions">
           <div class="compose-icons">
             <!-- Image -->
-            <button class="compose-icon-btn" title="Photo">
+            <button type="button" class="compose-icon-btn" title="Photo">
               <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </button>
             <!-- GIF -->
-            <button class="compose-icon-btn" title="GIF">
+            <button type="button" class="compose-icon-btn" title="GIF">
               <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
             </button>
             <!-- Emoji -->
-            <button class="compose-icon-btn" title="Emoji">
+            <button type="button" class="compose-icon-btn" title="Emoji">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
             <!-- Location -->
-            <button class="compose-icon-btn" title="Location">
+            <button type="button" class="compose-icon-btn" title="Location">
               <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             </button>
           </div>
-          <button class="compose-submit" id="composeBtn">Pint</button>
+          <button type="submit" class="compose-submit" id="composeBtn">Pint</button>
         </div>
       </div>
-    </div>
+    </form>
 
     <!-- Feed -->
-    <?php foreach ($pints as $pint): ?>
-    <article class="pint-card">
-      <div class="avatar"><?= mb_strtoupper(mb_substr($pint['user'], 0, 1)) ?></div>
-      <div style="flex:1;min-width:0">
-        <div class="pint-meta">
-          <span class="pint-name"><?= htmlspecialchars($pint['user']) ?></span>
-          <span class="pint-handle"><?= htmlspecialchars($pint['handle']) ?></span>
-          <span class="pint-dot">·</span>
-          <span class="pint-time"><?= htmlspecialchars($pint['time']) ?></span>
-        </div>
-        <div class="pint-body">
-          <?php
-          // Highlight hashtags
-          echo preg_replace(
-            '/(#\w+)/',
-            '<span class="hashtag">$1</span>',
-            htmlspecialchars($pint['body'])
-          );
-          ?>
-        </div>
-        <div class="pint-actions">
-          <!-- Reply -->
-          <button class="pint-action reply">
-            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span><?= $pint['replies'] ?: '' ?></span>
-          </button>
-          <!-- Repint -->
-          <button class="pint-action repint">
-            <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-            <span><?= $pint['repints'] ?: '' ?></span>
-          </button>
-          <!-- Like -->
-          <button class="pint-action like">
-            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            <span><?= $pint['likes'] ?: '' ?></span>
-          </button>
+    <?php if (empty($pints)): ?>
+      <div style="padding: 32px 16px; text-align: center; color: var(--gray);">
+        <p style="font-size: 18px; font-weight: 700; color: var(--black); margin-bottom: 8px;">Welcome to PintSocial!</p>
+        <p>Your feed is empty. Be the first to post a pint!</p>
+      </div>
+    <?php else: ?>
+      <?php foreach ($pints as $pint): ?>
+      <article class="pint-card">
+        <a href="profile.php?u=<?= urlencode($pint['username']) ?>" style="text-decoration:none; color:inherit;">
+          <div class="avatar"><?= mb_strtoupper(mb_substr($pint['username'], 0, 1)) ?></div>
+        </a>
+        <div style="flex:1;min-width:0">
+          <div class="pint-meta">
+            <a href="profile.php?u=<?= urlencode($pint['username']) ?>" class="pint-name" style="text-decoration:none; color:inherit; font-weight:700;"><?= htmlspecialchars($pint['username']) ?></a>
+            <span class="pint-handle">@<?= strtolower(htmlspecialchars($pint['username'])) ?></span>
+            <span class="pint-dot">·</span>
+            <span class="pint-time"><?= date('M j', strtotime($pint['created_at'])) ?></span>
+          </div>
+          <div class="pint-body">
+            <?php
+            // Highlight hashtags
+            echo preg_replace(
+              '/(#\w+)/',
+              '<span class="hashtag">$1</span>',
+              nl2br(htmlspecialchars($pint['body']))
+            );
+            ?>
+          </div>
+          <div class="pint-actions">
+            <!-- Reply -->
+            <button class="pint-action reply">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span><?= $pint['replies_count'] ?: '' ?></span>
+            </button>
+            <!-- Repint -->
+            <button class="pint-action repint">
+              <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <span><?= $pint['repints_count'] ?: '' ?></span>
+            </button>
+            <!-- Like -->
+            <button class="pint-action like">
+              <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span><?= $pint['likes_count'] ?: '' ?></span>
+            </button>
           <!-- Share -->
           <button class="pint-action share">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -150,6 +150,7 @@ require_once __DIR__ . '/components/stub_data.php';
       </div>
     </article>
     <?php endforeach; ?>
+    <?php endif; ?>
 
   </main>
 
