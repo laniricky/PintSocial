@@ -41,6 +41,23 @@ $stmt = $db->prepare('
 $stmt->execute([$profile_id]);
 $pints = $stmt->fetchAll();
 
+// Fetch follow stats
+$stmt = $db->prepare('SELECT COUNT(*) FROM follows WHERE follower_id = ?');
+$stmt->execute([$profile_id]);
+$following_count = $stmt->fetchColumn();
+
+$stmt = $db->prepare('SELECT COUNT(*) FROM follows WHERE following_id = ?');
+$stmt->execute([$profile_id]);
+$followers_count = $stmt->fetchColumn();
+
+// Check if current user is following this profile
+$is_following = false;
+if ($profile_id !== $_SESSION['user_id']) {
+    $stmt = $db->prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?');
+    $stmt->execute([$_SESSION['user_id'], $profile_id]);
+    $is_following = (bool)$stmt->fetchColumn();
+}
+
 require_once __DIR__ . '/components/stub_data.php';
 ?>
 <!DOCTYPE html>
@@ -108,7 +125,9 @@ require_once __DIR__ . '/components/stub_data.php';
         <?php if ($profile_username === $username): ?>
           <a href="edit_profile.php" class="edit-profile-btn" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;">Edit profile</a>
         <?php else: ?>
-          <button class="edit-profile-btn">Follow</button>
+          <button class="edit-profile-btn" id="followBtn" data-id="<?= $profile_id ?>" data-following="<?= $is_following ? '1' : '0' ?>">
+            <?= $is_following ? 'Following' : 'Follow' ?>
+          </button>
         <?php endif; ?>
       </div>
 
@@ -148,16 +167,16 @@ require_once __DIR__ . '/components/stub_data.php';
         </span>
       </div>
 
-      <!-- Stats (stubbed for now) -->
+      <!-- Stats -->
       <div class="profile-stats">
-        <div class="profile-stat">
-          <span class="profile-stat-value">142</span>
+        <a href="network.php?u=<?= urlencode($profile_username) ?>&tab=following" class="profile-stat" style="text-decoration:none; color:inherit;">
+          <span class="profile-stat-value"><?= number_format($following_count) ?></span>
           <span class="profile-stat-label">Following</span>
-        </div>
-        <div class="profile-stat">
-          <span class="profile-stat-value">3,800</span>
+        </a>
+        <a href="network.php?u=<?= urlencode($profile_username) ?>&tab=followers" class="profile-stat" style="text-decoration:none; color:inherit;">
+          <span class="profile-stat-value"><?= number_format($followers_count) ?></span>
           <span class="profile-stat-label">Followers</span>
-        </div>
+        </a>
       </div>
 
     </div><!-- /.profile-header -->
@@ -280,7 +299,55 @@ document.querySelectorAll('.pint-action.repint').forEach(btn => {
   });
 });
 
-// ── Remove Edit profile placeholder ──────────────────────────────────────────────
+// ── Follow Button AJAX ──────────────────────────────────────────────────────
+const followBtn = document.getElementById('followBtn');
+if (followBtn) {
+  followBtn.addEventListener('click', async () => {
+    const isFollowing = followBtn.dataset.following === '1';
+    const action = isFollowing ? 'unfollow' : 'follow';
+    const targetId = followBtn.dataset.id;
+    
+    // Optimistic update
+    followBtn.dataset.following = isFollowing ? '0' : '1';
+    followBtn.textContent = isFollowing ? 'Follow' : 'Following';
+    followBtn.style.color = ''; // reset unfollow hover if fast clicked
+    followBtn.style.borderColor = '';
+    
+    try {
+      const fd = new FormData();
+      fd.append('target_id', targetId);
+      fd.append('action', action);
+      fd.append('csrf_token', '<?= csrf_token() ?>');
+      
+      const res = await fetch('ajax_follow.php', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Network error');
+    } catch (e) {
+      // Revert
+      followBtn.dataset.following = isFollowing ? '1' : '0';
+      followBtn.textContent = isFollowing ? 'Following' : 'Follow';
+    }
+  });
+
+  // Hover to Unfollow
+  followBtn.addEventListener('mouseenter', () => {
+    if (followBtn.dataset.following === '1') {
+      followBtn.textContent = 'Unfollow';
+      followBtn.style.color = '#f4212e';
+      followBtn.style.borderColor = '#fdc9ce';
+      followBtn.style.backgroundColor = 'rgba(244, 33, 46, 0.1)';
+    }
+  });
+  followBtn.addEventListener('mouseleave', () => {
+    if (followBtn.dataset.following === '1') {
+      followBtn.textContent = 'Following';
+      followBtn.style.color = '';
+      followBtn.style.borderColor = '';
+      followBtn.style.backgroundColor = '';
+    } else {
+      followBtn.textContent = 'Follow';
+    }
+  });
+}
 
 // ── Pint button → compose on dashboard ───────────────────────────────────
 document.getElementById('pintBtn')?.addEventListener('click', () => {

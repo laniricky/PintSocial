@@ -21,14 +21,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
 }
 
 // ── Fetch feed data ─────────────────────────────────────────────────────────
+$tab = $_GET['tab'] ?? 'foryou';
 $db = get_db();
-$stmt = $db->query('
-    SELECT p.*, u.username 
-    FROM pints p 
-    JOIN users u ON p.user_id = u.id 
-    ORDER BY p.created_at DESC 
-    LIMIT 50
-');
+
+if ($tab === 'following') {
+    $stmt = $db->prepare('
+        SELECT p.*, u.username 
+        FROM pints p 
+        JOIN users u ON p.user_id = u.id 
+        JOIN follows f ON p.user_id = f.following_id
+        WHERE f.follower_id = ?
+        ORDER BY p.created_at DESC 
+        LIMIT 50
+    ');
+    $stmt->execute([$_SESSION['user_id']]);
+} else {
+    $stmt = $db->query('
+        SELECT p.*, u.username 
+        FROM pints p 
+        JOIN users u ON p.user_id = u.id 
+        ORDER BY p.created_at DESC 
+        LIMIT 50
+    ');
+}
 $pints = $stmt->fetchAll();
 
 require_once __DIR__ . '/components/stub_data.php';
@@ -60,8 +75,8 @@ require_once __DIR__ . '/components/stub_data.php';
         <h2>Home</h2>
       </div>
       <div class="feed-tabs">
-        <button class="feed-tab active">For you</button>
-        <button class="feed-tab">Following</button>
+        <a href="dashboard.php?tab=foryou" class="feed-tab <?= $tab === 'foryou' ? 'active' : '' ?>" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">For you</a>
+        <a href="dashboard.php?tab=following" class="feed-tab <?= $tab === 'following' ? 'active' : '' ?>" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">Following</a>
       </div>
     </div>
 
@@ -166,13 +181,7 @@ txt?.addEventListener('input', () => {
   btn.classList.toggle('ready', txt.value.trim().length > 0);
 });
 
-// Feed tab toggle
-document.querySelectorAll('.feed-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.feed-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-  });
-});
+// Removed JS feed tab toggle since it's driven by PHP now
 
 // Pint action toggles (like, repint)
 document.querySelectorAll('.pint-action.like').forEach(btn => {
